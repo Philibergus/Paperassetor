@@ -754,55 +754,55 @@ button.secondary {
   margin-bottom: 2rem;
 }
 
-.agenda-scanner h3 {
-  color: var(--primary-color);
-  margin-bottom: 1rem;
+.upload-section {
+  border: 2px dashed #dee2e6;
+  border-radius: var(--border-radius);
+  padding: 2rem;
   text-align: center;
+  background: #f8f9fa;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
-.upload-instructions {
-  text-align: center;
-  color: #666;
-  margin-bottom: 1.5rem;
+.upload-section:hover {
+  border-color: var(--primary-color);
+  background: #f1f3f9;
 }
 
-.file-upload {
+.drop-zone {
+  position: relative;
+  min-height: 150px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
+  margin: 1rem 0;
+  border-radius: var(--border-radius);
+  background: white;
+  border: 1px solid #dee2e6;
 }
 
-.file-upload input[type="file"] {
-  display: none;
+.file-input {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
 }
 
 .upload-label {
-  background-color: var(--primary-color);
-  color: white;
-  padding: 1rem 2rem;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  width: 100%;
-  max-width: 300px;
-}
-
-.upload-label:hover {
-  background-color: #5c7cfe;
-  transform: translateY(-2px);
+  font-size: 1.1rem;
+  color: #666;
+  pointer-events: none;
 }
 
 .progress-container {
   margin-top: 1.5rem;
-  width: 100%;
 }
 
 .progress-bar {
   width: 100%;
   height: 8px;
-  background-color: #e9ecef;
+  background: #e9ecef;
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -810,28 +810,105 @@ button.secondary {
 
 .progress-fill {
   height: 100%;
-  background-color: var(--primary-color);
+  background: var(--primary-color);
   transition: width 0.3s ease;
 }
 
 .progress-text {
-  display: block;
-  text-align: center;
-  color: #666;
   font-size: 0.9rem;
-}
-
-/* Styles pour l'aperçu vide */
-.empty-preview {
   color: #666;
-  text-align: center;
-  padding: 2rem;
-  background: #f8f9fa;
-  border-radius: var(--border-radius);
-  border: 1px dashed #dee2e6;
 }
 
-/* Styles pour le conteneur principal */
+/* Styles pour la liste des patients */
+.patients-list {
+  margin-top: 2rem;
+}
+
+.add-patient {
+  margin-bottom: 2rem;
+}
+
+.patient-input {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  border: 2px solid #dee2e6;
+  border-radius: var(--border-radius);
+  transition: all 0.3s ease;
+}
+
+.patient-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
+}
+
+.patient-item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: var(--border-radius);
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.patient-item:hover {
+  transform: translateX(5px);
+  border-color: var(--primary-color);
+}
+
+.patient-time {
+  font-weight: bold;
+  margin-right: 1rem;
+  min-width: 60px;
+}
+
+.patient-name {
+  flex: 1;
+}
+
+.patient-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.patient-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.remove-button {
+  background: none;
+  border: none;
+  color: #dc3545;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+  line-height: 1;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.remove-button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Layout principal avec sidebar */
 .app-layout {
   display: flex;
   min-height: 100vh;
@@ -918,4 +995,23 @@ button:hover:not(:disabled) {
 button:disabled {
   background: #ccc;
   cursor: not-allowed;
+}
+
+/* Styles pour le débogage OCR */
+.debug-info {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: var(--border-radius);
+  font-family: monospace;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.debug-info pre {
+  margin: 0;
+  color: #666;
 } 

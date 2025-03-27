@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import InputArea from './components/InputArea';
 import OutputPreview from './components/OutputPreview';
 import TemplateSelector from './components/TemplateSelector';
@@ -13,6 +13,24 @@ const App = () => {
   const [patients, setPatients] = useState([]);
   const [markdown, setMarkdown] = useState('');
 
+  // Charger les patients depuis le localStorage au démarrage
+  useEffect(() => {
+    const savedPatients = localStorage.getItem('patients');
+    if (savedPatients) {
+      const today = new Date().toISOString().split('T')[0];
+      const patientsOfDay = JSON.parse(savedPatients).filter(patient => {
+        const patientDate = new Date().toISOString().split('T')[0];
+        return patientDate === today;
+      });
+      setPatients(patientsOfDay);
+    }
+  }, []);
+
+  // Sauvegarder les patients dans le localStorage à chaque modification
+  useEffect(() => {
+    localStorage.setItem('patients', JSON.stringify(patients));
+  }, [patients]);
+
   const handleTemplateSelect = (template) => {
     setSelectedTemplate(template);
   };
@@ -21,7 +39,7 @@ const App = () => {
     setMarkdown(newMarkdown);
   };
 
-  const handlePatientsImported = (newPatients) => {
+  const handlePatientsChange = (newPatients) => {
     setPatients(newPatients);
   };
 
@@ -77,8 +95,11 @@ const App = () => {
 
           <section id="patients" className="patients-section">
             <h2>Patients du Jour</h2>
-            <AgendaScanner onPatientsImported={handlePatientsImported} />
-            <PatientsTodoList patients={patients} />
+            <AgendaScanner onPatientsImported={handlePatientsChange} />
+            <PatientsTodoList 
+              patients={patients}
+              onPatientsChange={handlePatientsChange}
+            />
           </section>
 
           <section id="correspondants" className="correspondants-section">

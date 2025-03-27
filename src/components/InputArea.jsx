@@ -1,11 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-const InputArea = ({ onMarkdownChange }) => {
-  const [text, setText] = useState('');
-
-  const handleTextChange = (e) => {
-    const newText = e.target.value;
-    setText(newText);
+const InputArea = ({ markdown, onMarkdownChange }) => {
+  const handleTextChange = (event) => {
+    const newText = event.target.value;
     onMarkdownChange(newText);
   };
 
@@ -14,10 +11,10 @@ const InputArea = ({ onMarkdownChange }) => {
     const template = `# Compte Rendu Médical
 
 ## Informations Patient
-Nom: 
-Prénom: 
-Date de naissance: 
-Numéro de sécurité sociale: 
+Nom:
+Prénom:
+Date de naissance:
+Numéro de sécurité sociale:
 
 ## Bilan parodontal
 - État général:
@@ -25,27 +22,23 @@ Numéro de sécurité sociale:
 
 ## Motif de consultation
 
-
 ## Diagnostic
 
-
 ## Plan de traitement
-
 `;
-    setText(template);
     onMarkdownChange(template);
   };
 
   return (
     <div className="input-area">
-      <div className="button-group">
-        <button className="secondary" onClick={insertTemplate}>Insérer Template</button>
-      </div>
+      <button onClick={insertTemplate} className="template-button">
+        Insérer Template
+      </button>
       <textarea
-        className="text-input"
-        value={text}
+        value={markdown}
         onChange={handleTextChange}
         placeholder="Saisissez votre texte en format Markdown..."
+        className="markdown-input"
       />
     </div>
   );

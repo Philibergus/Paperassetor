@@ -1,47 +1,28 @@
 import React, { useState } from 'react';
 import InputArea from './components/InputArea';
 import OutputPreview from './components/OutputPreview';
-import Correspondants from './components/Correspondants';
+import TemplateSelector from './components/TemplateSelector';
+import AgendaScanner from './components/AgendaScanner';
 import PatientsTodoList from './components/PatientsTodoList';
+import Correspondants from './components/Correspondants';
 import EmailSender from './components/EmailSender';
 import './styles.css';
 
 const App = () => {
+  const [selectedTemplate, setSelectedTemplate] = useState('CR - Bilan Paro');
+  const [patients, setPatients] = useState([]);
   const [markdown, setMarkdown] = useState('');
-  const [structuredContent, setStructuredContent] = useState(null);
-  const [activeTab, setActiveTab] = useState('redaction');
+
+  const handleTemplateSelect = (template) => {
+    setSelectedTemplate(template);
+  };
 
   const handleMarkdownChange = (newMarkdown) => {
     setMarkdown(newMarkdown);
   };
 
-  const handleStructuredContentChange = (content) => {
-    setStructuredContent(content);
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'redaction':
-        return (
-          <>
-            <InputArea onMarkdownChange={handleMarkdownChange} />
-            <OutputPreview 
-              markdown={markdown} 
-              onStructuredContentChange={handleStructuredContentChange}
-            />
-            <EmailSender 
-              markdown={markdown} 
-              structuredContent={structuredContent} 
-            />
-          </>
-        );
-      case 'correspondants':
-        return <Correspondants />;
-      case 'patients':
-        return <PatientsTodoList />;
-      default:
-        return null;
-    }
+  const handlePatientsImported = (newPatients) => {
+    setPatients(newPatients);
   };
 
   return (
@@ -52,8 +33,7 @@ const App = () => {
           <li className="nav-item">
             <a 
               href="#redaction" 
-              className={`nav-link ${activeTab === 'redaction' ? 'active' : ''}`}
-              onClick={() => setActiveTab('redaction')}
+              className="nav-link active"
             >
               Rédaction CR
             </a>
@@ -61,8 +41,7 @@ const App = () => {
           <li className="nav-item">
             <a 
               href="#correspondants" 
-              className={`nav-link ${activeTab === 'correspondants' ? 'active' : ''}`}
-              onClick={() => setActiveTab('correspondants')}
+              className="nav-link"
             >
               Correspondants
             </a>
@@ -70,8 +49,7 @@ const App = () => {
           <li className="nav-item">
             <a 
               href="#patients" 
-              className={`nav-link ${activeTab === 'patients' ? 'active' : ''}`}
-              onClick={() => setActiveTab('patients')}
+              className="nav-link"
             >
               Patients du Jour
             </a>
@@ -81,7 +59,32 @@ const App = () => {
       
       <main className="main-content">
         <div className="container">
-          {renderContent()}
+          <section id="redaction">
+            <TemplateSelector
+              onSelect={handleTemplateSelect}
+              selectedTemplate={selectedTemplate}
+            />
+            <div className="editor-container">
+              <InputArea 
+                markdown={markdown}
+                onMarkdownChange={handleMarkdownChange}
+              />
+              <div className="preview-section">
+                <OutputPreview markdown={markdown} />
+              </div>
+            </div>
+          </section>
+
+          <section id="patients" className="patients-section">
+            <h2>Patients du Jour</h2>
+            <AgendaScanner onPatientsImported={handlePatientsImported} />
+            <PatientsTodoList patients={patients} />
+          </section>
+
+          <section id="correspondants" className="correspondants-section">
+            <h2>Gestion des Correspondants</h2>
+            <Correspondants />
+          </section>
         </div>
       </main>
     </div>

@@ -7,8 +7,10 @@ const AgendaScanner = ({ onPatientsImported }) => {
   const [debugInfo, setDebugInfo] = useState('');
 
   const addDebugInfo = (info) => {
-    console.log('Debug OCR:', info);
-    setDebugInfo(prev => prev + '\n' + info);
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${info}`;
+    console.log('Debug OCR:', logMessage);
+    setDebugInfo(prev => prev + '\n' + logMessage);
   };
 
   const processImage = async (imageData) => {
@@ -18,7 +20,9 @@ const AgendaScanner = ({ onPatientsImported }) => {
 
     try {
       addDebugInfo('Début du traitement de l\'image');
-      addDebugInfo('Type d\'image reçu: ' + (imageData instanceof Blob ? 'Blob' : typeof imageData));
+      addDebugInfo(`Type d'image reçu: ${imageData instanceof Blob ? 'Blob' : typeof imageData}`);
+      addDebugInfo(`Taille de l'image: ${imageData.size} octets`);
+      addDebugInfo(`Type MIME: ${imageData.type}`);
 
       const result = await Tesseract.recognize(
         imageData,
@@ -26,51 +30,79 @@ const AgendaScanner = ({ onPatientsImported }) => {
         {
           logger: data => {
             if (data.status === 'recognizing text') {
-              setProgress(parseInt(data.progress * 100));
-              addDebugInfo(`Progression OCR: ${parseInt(data.progress * 100)}%`);
+              const currentProgress = parseInt(data.progress * 100);
+              setProgress(currentProgress);
+              addDebugInfo(`Progression OCR: ${currentProgress}%`);
             }
-            addDebugInfo(`Status OCR: ${data.status}`);
+            addDebugInfo(`Status OCR: ${data.status} - ${JSON.stringify(data.progress)}`);
           }
         }
       );
 
-      addDebugInfo('Texte extrait: ' + result.data.text);
+      addDebugInfo('Texte extrait brut:');
+      addDebugInfo('---START---');
+      addDebugInfo(result.data.text);
+      addDebugInfo('---END---');
+
       const text = result.data.text;
+      addDebugInfo('Début de l\'analyse du texte extrait');
       const appointments = parseAppointments(text);
-      addDebugInfo('Rendez-vous trouvés: ' + JSON.stringify(appointments, null, 2));
+      addDebugInfo(`Nombre de rendez-vous trouvés: ${appointments.length}`);
+      addDebugInfo('Rendez-vous détectés:');
+      appointments.forEach((apt, index) => {
+        addDebugInfo(`[${index + 1}] ${apt.time} - ${apt.patientInfo}`);
+      });
       
       if (appointments.length > 0) {
         onPatientsImported(appointments);
-        addDebugInfo('Rendez-vous importés avec succès');
+        addDebugInfo('Rendez-vous importés avec succès dans l\'application');
       } else {
-        addDebugInfo('Aucun rendez-vous trouvé dans le texte');
+        addDebugInfo('⚠️ Aucun rendez-vous n\'a été trouvé dans le texte');
       }
     } catch (error) {
-      const errorMsg = 'Erreur lors de l\'analyse de l\'image: ' + error.message;
+      const errorMsg = `❌ Erreur lors de l'analyse de l'image: ${error.message}`;
       console.error(errorMsg);
       addDebugInfo(errorMsg);
+      if (error.stack) {
+        addDebugInfo('Stack trace:');
+        addDebugInfo(error.stack);
+      }
     } finally {
       setIsProcessing(false);
+      addDebugInfo('Fin du traitement de l\'image');
     }
   };
 
   const parseAppointments = (text) => {
-    addDebugInfo('Début de l\'analyse du texte');
-    // Regex améliorée pour détecter différents formats d'heures et de noms
+    addDebugInfo('Début de l\'analyse du texte pour extraction des rendez-vous');
     const appointmentRegex = /(\d{1,2}[h:]\d{0,2})\s*(?:[-–]|\s+)([A-ZÀ-Ÿ][a-zà-ÿ\s-]+)(?:\s*>|\s*$|\n)/gm;
+    addDebugInfo(`Expression régulière utilisée: ${appointmentRegex.source}`);
+    
     const appointments = [];
     let match;
+    let matchCount = 0;
 
     while ((match = appointmentRegex.exec(text)) !== null) {
-      addDebugInfo('Match trouvé: ' + JSON.stringify(match));
+      matchCount++;
+      addDebugInfo(`Match #${matchCount} trouvé: "${match[0]}"`);
+      
       let time = match[1].replace('h', ':');
-      if (time.length === 4 && time.includes(':')) time = '0' + time;
-      if (!time.includes(':')) time = time + ':00';
+      addDebugInfo(`Heure brute: "${match[1]}" -> Formatée: "${time}"`);
+      
+      if (time.length === 4 && time.includes(':')) {
+        time = '0' + time;
+        addDebugInfo(`Ajout du 0 initial: "${time}"`);
+      }
+      if (!time.includes(':')) {
+        time = time + ':00';
+        addDebugInfo(`Ajout des minutes: "${time}"`);
+      }
       
       const patientName = match[2].trim();
-      addDebugInfo(`Heure formatée: ${time}, Nom: ${patientName}`);
+      addDebugInfo(`Nom du patient: "${patientName}"`);
 
-      if (patientName && !patientName.toLowerCase().includes('absence') && 
+      if (patientName && 
+          !patientName.toLowerCase().includes('absence') && 
           !patientName.toLowerCase().includes('pause')) {
         appointments.push({
           time,
@@ -80,14 +112,21 @@ const AgendaScanner = ({ onPatientsImported }) => {
           sentToPatient: false,
           savedInLogosw: false
         });
-        addDebugInfo(`Rendez-vous ajouté: ${time} - ${patientName}`);
+        addDebugInfo(`✅ Rendez-vous ajouté: ${time} - ${patientName}`);
       } else {
-        addDebugInfo(`Rendez-vous ignoré (absence/pause): ${time} - ${patientName}`);
+        addDebugInfo(`⚠️ Rendez-vous ignoré (absence/pause): ${time} - ${patientName}`);
       }
     }
 
+    addDebugInfo(`Total des correspondances trouvées: ${matchCount}`);
+    addDebugInfo(`Rendez-vous valides extraits: ${appointments.length}`);
+
     const sortedAppointments = appointments.sort((a, b) => a.time.localeCompare(b.time));
-    addDebugInfo('Rendez-vous triés: ' + JSON.stringify(sortedAppointments, null, 2));
+    addDebugInfo('Rendez-vous triés par ordre chronologique:');
+    sortedAppointments.forEach((apt, index) => {
+      addDebugInfo(`[${index + 1}] ${apt.time} - ${apt.patientInfo}`);
+    });
+
     return sortedAppointments;
   };
 
@@ -140,36 +179,29 @@ const AgendaScanner = ({ onPatientsImported }) => {
         <div 
           className="drop-zone"
           role="button"
-          tabIndex="0"
+          tabIndex={0}
+          onClick={() => document.getElementById('fileInput').click()}
         >
           <input
             type="file"
+            id="fileInput"
             accept="image/*"
             onChange={handleFileUpload}
-            disabled={isProcessing}
-            id="agenda-upload"
-            className="file-input"
+            style={{ display: 'none' }}
           />
-          <label htmlFor="agenda-upload" className="upload-label">
-            {isProcessing ? 'Analyse en cours...' : 'Cliquez ou déposez une image ici'}
-          </label>
-        </div>
-        {isProcessing && (
-          <div className="progress-container">
-            <div className="progress-bar">
-              <div 
-                className="progress-fill"
-                style={{ width: `${progress}%` }}
-              ></div>
+          {isProcessing ? (
+            <div className="processing-status">
+              <div className="spinner"></div>
+              <p>Traitement en cours... {progress}%</p>
             </div>
-            <span className="progress-text">{progress}% - Analyse de l'agenda en cours</span>
-          </div>
-        )}
-        {debugInfo && (
-          <div className="debug-info">
-            <pre>{debugInfo}</pre>
-          </div>
-        )}
+          ) : (
+            <p>Cliquez ou déposez une image ici</p>
+          )}
+        </div>
+        <div className="debug-info">
+          <h4>Logs de débogage :</h4>
+          <pre>{debugInfo}</pre>
+        </div>
       </div>
     </div>
   );

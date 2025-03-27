@@ -28,6 +28,32 @@ const OutputPreview = ({ markdown }) => {
     }
   };
 
+  // Fonction pour télécharger le document PDF
+  const downloadPdf = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: markdown }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'rapport.pdf';
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Erreur:', error);
+      alert('Une erreur est survenue lors de la génération du PDF');
+    }
+  };
+
   return (
     <div className="output-preview">
       <div className="preview-container">
@@ -44,9 +70,14 @@ const OutputPreview = ({ markdown }) => {
           </div>
         </div>
       </div>
-      <button className="download-button" onClick={downloadDocx}>
-        Télécharger en .docx
-      </button>
+      <div className="download-buttons">
+        <button className="download-button" onClick={downloadDocx}>
+          Télécharger en .docx
+        </button>
+        <button className="download-button" onClick={downloadPdf}>
+          Télécharger en .pdf
+        </button>
+      </div>
     </div>
   );
 };

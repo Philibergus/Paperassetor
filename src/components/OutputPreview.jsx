@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
-const OutputPreview = () => {
+const OutputPreview = ({ markdown }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [structuredContent, setStructuredContent] = useState(null);
   const [error, setError] = useState(null);
@@ -69,7 +69,7 @@ const OutputPreview = () => {
         <h3>Aperçu Markdown</h3>
         <button
           onClick={analyzeWithLMStudio}
-          disabled={isAnalyzing}
+          disabled={isAnalyzing || !markdown}
           className="analyze-button"
         >
           {isAnalyzing ? 'Analyse en cours...' : 'Analyser avec LM Studio'}
@@ -77,7 +77,11 @@ const OutputPreview = () => {
       </div>
 
       <div className="preview-content">
-        <ReactMarkdown>{markdown}</ReactMarkdown>
+        {markdown ? (
+          <ReactMarkdown>{markdown}</ReactMarkdown>
+        ) : (
+          <p className="empty-preview">L'aperçu du texte apparaîtra ici...</p>
+        )}
       </div>
 
       {error && (
@@ -98,10 +102,16 @@ const OutputPreview = () => {
             ))}
           </div>
           <div className="download-buttons">
-            <button onClick={() => downloadDocument('docx')}>
+            <button 
+              onClick={() => downloadDocument('docx')}
+              disabled={!structuredContent}
+            >
               Télécharger en .docx
             </button>
-            <button onClick={() => downloadDocument('pdf')}>
+            <button 
+              onClick={() => downloadDocument('pdf')}
+              disabled={!structuredContent}
+            >
               Télécharger en .pdf
             </button>
           </div>

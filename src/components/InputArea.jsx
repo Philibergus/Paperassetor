@@ -1,26 +1,52 @@
-import React from 'react';
+import React, { useState } from 'react';
 
-const InputArea = ({ onTextChange, onGenerate }) => {
+const InputArea = ({ onMarkdownChange }) => {
+  const [text, setText] = useState('');
+
+  const handleTextChange = (e) => {
+    const newText = e.target.value;
+    setText(newText);
+    onMarkdownChange(newText);
+  };
+
+  // Exemple de template
+  const insertTemplate = () => {
+    const template = `# Compte Rendu Médical
+
+## Informations Patient
+Nom: 
+Prénom: 
+Date de naissance: 
+Numéro de sécurité sociale: 
+
+## Bilan parodontal
+- État général:
+- Observations:
+
+## Motif de consultation
+
+
+## Diagnostic
+
+
+## Plan de traitement
+
+`;
+    setText(template);
+    onMarkdownChange(template);
+  };
+
   return (
     <div className="input-area">
-      <textarea
-        placeholder="Collez ou saisissez votre texte ici..."
-        onChange={(e) => onTextChange(e.target.value)}
-        className="text-input"
-      />
       <div className="button-group">
-        <div className="right-buttons">
-          <button className="secondary" title="Dictée vocale">
-            💬
-          </button>
-          <button className="secondary" title="Importer un document">
-            Importer
-          </button>
-        </div>
-        <button onClick={onGenerate} className="generate-button">
-          Générer le compte rendu
-        </button>
+        <button className="secondary" onClick={insertTemplate}>Insérer Template</button>
       </div>
+      <textarea
+        className="text-input"
+        value={text}
+        onChange={handleTextChange}
+        placeholder="Saisissez votre texte en format Markdown..."
+      />
     </div>
   );
 };

@@ -5,6 +5,8 @@ const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx');
 const PDFDocument = require('pdfkit');
 const { processText } = require('./lmStudio');
 const { documentTemplate, applyTemplate, baseTemplate } = require('./templates');
+const db = require('./database');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Création de l'application Express
@@ -13,6 +15,18 @@ const app = express();
 // Configuration du middleware
 app.use(cors());
 app.use(express.json());
+
+// Configuration de Nodemailer pour l'envoi d'emails
+let transporter = null;
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+}
 
 // Fonction pour créer un document Word structuré
 async function createStructuredDocx(structuredContent) {
@@ -132,6 +146,152 @@ app.post('/generate-structured-doc', async (req, res) => {
             details: error.message
         });
     }
+});
+
+// Routes pour la gestion des correspondants
+// Récupérer tous les correspondants
+app.get('/api/correspondants', async (req, res) => {
+  try {
+    const correspondants = await db.getAllCorrespondants();
+    res.json(correspondants);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des correspondants:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la récupération des correspondants',
+      details: error.message
+    });
+  }
+});
+
+// Récupérer un correspondant par ID
+app.get('/api/correspondants/:id', async (req, res) => {
+  try {
+    const correspondant = await db.getCorrespondantById(req.params.id);
+    if (!correspondant) {
+      return res.status(404).json({ error: 'Correspondant non trouvé' });
+    }
+    res.json(correspondant);
+  } catch (error) {
+    console.error('Erreur lors de la récupération du correspondant:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la récupération du correspondant',
+      details: error.message
+    });
+  }
+});
+
+// Ajouter un nouveau correspondant
+app.post('/api/correspondants', async (req, res) => {
+  try {
+    const newCorrespondant = await db.addCorrespondant(req.body);
+    res.status(201).json(newCorrespondant);
+  } catch (error) {
+    console.error('Erreur lors de l\'ajout du correspondant:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de l\'ajout du correspondant',
+      details: error.message
+    });
+  }
+});
+
+// Mettre à jour un correspondant
+app.put('/api/correspondants/:id', async (req, res) => {
+  try {
+    const updatedCorrespondant = await db.updateCorrespondant(req.params.id, req.body);
+    res.json(updatedCorrespondant);
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du correspondant:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la mise à jour du correspondant',
+      details: error.message
+    });
+  }
+});
+
+// Supprimer un correspondant
+app.delete('/api/correspondants/:id', async (req, res) => {
+  try {
+    await db.deleteCorrespondant(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    console.error('Erreur lors de la suppression du correspondant:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la suppression du correspondant',
+      details: error.message
+    });
+  }
+});
+
+// Rechercher des correspondants
+app.post('/api/correspondants/search', async (req, res) => {
+  try {
+    const correspondants = await db.searchCorrespondants(req.body);
+    res.json(correspondants);
+  } catch (error) {
+    console.error('Erreur lors de la recherche de correspondants:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de la recherche de correspondants',
+      details: error.message
+    });
+  }
+});
+
+// Envoyer un email avec le document en pièce jointe
+app.post('/api/send-email', async (req, res) => {
+  if (!transporter) {
+    return res.status(500).json({ 
+      error: 'Configuration d\'email manquante',
+      details: 'Les informations d\'identification pour l\'envoi d\'emails n\'ont pas été configurées'
+    });
+  }
+
+  try {
+    const { to, subject, message, text, format } = req.body;
+    
+    // Générer le document
+    let buffer;
+    let filename;
+    let mimetype;
+
+    // Analyse du texte avec LM Studio
+    const structuredContent = await processText(text);
+
+    if (format === 'pdf') {
+      buffer = await createStructuredPdf(structuredContent);
+      filename = 'rapport.pdf';
+      mimetype = 'application/pdf';
+    } else {
+      buffer = await createStructuredDocx(structuredContent);
+      filename = 'rapport.docx';
+      mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    }
+
+    // Configuration de l'email
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      text: message,
+      attachments: [
+        {
+          filename,
+          content: buffer,
+          contentType: mimetype
+        }
+      ]
+    };
+
+    // Envoi de l'email
+    await transporter.sendMail(mailOptions);
+    
+    res.json({ success: true, message: 'Email envoyé avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi de l\'email:', error);
+    res.status(500).json({ 
+      error: 'Erreur lors de l\'envoi de l\'email',
+      details: error.message
+    });
+  }
 });
 
 // Conservation des anciens endpoints pour la rétrocompatibilité

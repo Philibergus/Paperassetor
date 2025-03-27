@@ -75,53 +75,62 @@ const AgendaScanner = ({ onPatientsImported }) => {
 
   const parseAppointments = (text) => {
     addDebugInfo('Début de l\'analyse du texte pour extraction des rendez-vous');
-    const appointmentRegex = /(\d{1,2}[h:]\d{0,2})\s*(?:[-–]|\s+)([A-ZÀ-Ÿ][a-zà-ÿ\s-]+)(?:\s*>|\s*$|\n)/gm;
-    addDebugInfo(`Expression régulière utilisée: ${appointmentRegex.source}`);
     
+    // Regex plus permissive pour détecter les noms
+    const nameRegex = /([A-ZÀ-Ÿ][A-ZÀ-Ÿ\s-]*(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ\s-]*)+)/g;
+    // Regex pour détecter les heures au format plus flexible
+    const timeRegex = /(\d{1,2})[:h]\d{0,2}|\d{1,2}[h:]\d{0,2}|\d{2}:\d{2}/g;
+    
+    addDebugInfo('Expression régulière pour les noms: ' + nameRegex.source);
+    addDebugInfo('Expression régulière pour les heures: ' + timeRegex.source);
+
     const appointments = [];
-    let match;
-    let matchCount = 0;
+    const lines = text.split('\n');
+    let currentTime = '08:00'; // Heure par défaut si non trouvée
 
-    while ((match = appointmentRegex.exec(text)) !== null) {
-      matchCount++;
-      addDebugInfo(`Match #${matchCount} trouvé: "${match[0]}"`);
+    lines.forEach((line, index) => {
+      addDebugInfo(`Analyse de la ligne ${index + 1}: "${line.trim()}"`);
       
-      let time = match[1].replace('h', ':');
-      addDebugInfo(`Heure brute: "${match[1]}" -> Formatée: "${time}"`);
-      
-      if (time.length === 4 && time.includes(':')) {
-        time = '0' + time;
-        addDebugInfo(`Ajout du 0 initial: "${time}"`);
+      // Recherche d'une heure dans la ligne
+      const timeMatch = line.match(timeRegex);
+      if (timeMatch) {
+        let time = timeMatch[0].replace('h', ':');
+        if (time.length === 4 && time.includes(':')) time = '0' + time;
+        if (!time.includes(':')) time = time + ':00';
+        currentTime = time;
+        addDebugInfo(`Heure trouvée: ${currentTime}`);
       }
-      if (!time.includes(':')) {
-        time = time + ':00';
-        addDebugInfo(`Ajout des minutes: "${time}"`);
-      }
-      
-      const patientName = match[2].trim();
-      addDebugInfo(`Nom du patient: "${patientName}"`);
 
-      if (patientName && 
-          !patientName.toLowerCase().includes('absence') && 
-          !patientName.toLowerCase().includes('pause')) {
-        appointments.push({
-          time,
-          patientInfo: patientName,
-          isDone: false,
-          sentToPractitioner: false,
-          sentToPatient: false,
-          savedInLogosw: false
+      // Recherche des noms dans la ligne
+      const nameMatches = line.match(nameRegex);
+      if (nameMatches) {
+        nameMatches.forEach(name => {
+          const patientName = name.trim();
+          addDebugInfo(`Nom trouvé: "${patientName}"`);
+
+          // Filtrer les mots qui ne sont probablement pas des noms de patients
+          const excludedWords = ['ABSENCES', 'ANNULE', 'TODO', 'VOIR'];
+          if (!excludedWords.some(word => patientName.toUpperCase().includes(word))) {
+            appointments.push({
+              time: currentTime,
+              patientInfo: patientName,
+              isDone: false,
+              sentToPractitioner: false,
+              sentToPatient: false,
+              savedInLogosw: false
+            });
+            addDebugInfo(`✅ Patient ajouté: ${currentTime} - ${patientName}`);
+          } else {
+            addDebugInfo(`⚠️ Nom ignoré (mot-clé exclu): ${patientName}`);
+          }
         });
-        addDebugInfo(`✅ Rendez-vous ajouté: ${time} - ${patientName}`);
-      } else {
-        addDebugInfo(`⚠️ Rendez-vous ignoré (absence/pause): ${time} - ${patientName}`);
       }
-    }
+    });
 
-    addDebugInfo(`Total des correspondances trouvées: ${matchCount}`);
-    addDebugInfo(`Rendez-vous valides extraits: ${appointments.length}`);
-
+    // Trier les rendez-vous par heure
     const sortedAppointments = appointments.sort((a, b) => a.time.localeCompare(b.time));
+    
+    addDebugInfo(`Total des noms trouvés: ${appointments.length}`);
     addDebugInfo('Rendez-vous triés par ordre chronologique:');
     sortedAppointments.forEach((apt, index) => {
       addDebugInfo(`[${index + 1}] ${apt.time} - ${apt.patientInfo}`);

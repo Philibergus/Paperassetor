@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
+const specialites = [
+  "Omnipratique",
+  "Chirurgie Orale",
+  "Parodontologie",
+  "Endodontie",
+  "Implantologie",
+  "Orthodontie",
+  "Pédodontie",
+  "Prothèse",
+  "Occlusodontie"
+];
+
 const Correspondants = () => {
   const [correspondants, setCorrespondants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -9,11 +21,13 @@ const Correspondants = () => {
     prenom: '',
     email: '',
     telephone: '',
-    specialite: '',
+    specialite: 'Omnipratique',
     adresse: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [filterText, setFilterText] = useState('');
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipMessage, setTooltipMessage] = useState('');
 
   // Charger les correspondants au chargement du composant
   useEffect(() => {
@@ -59,7 +73,7 @@ const Correspondants = () => {
         prenom: '',
         email: '',
         telephone: '',
-        specialite: '',
+        specialite: 'Omnipratique',
         adresse: ''
       });
     } catch (error) {
@@ -148,7 +162,7 @@ const Correspondants = () => {
       prenom: '',
       email: '',
       telephone: '',
-      specialite: '',
+      specialite: 'Omnipratique',
       adresse: ''
     });
   };
@@ -156,6 +170,40 @@ const Correspondants = () => {
   // Appliquer les modifications
   const applyEditing = () => {
     updateCorrespondant(editingId, newCorrespondant);
+  };
+
+  const handleImportCSV = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        const rows = text.split('\n');
+        const headers = rows[0].split(',').map(header => header.trim().toLowerCase());
+        
+        const newCorrespondants = rows.slice(1)
+          .filter(row => row.trim()) // Ignorer les lignes vides
+          .map(row => {
+            const values = row.split(',').map(value => value.trim());
+            const correspondant = {};
+            headers.forEach((header, index) => {
+              correspondant[header] = values[index] || '';
+            });
+            return {
+              ...correspondant,
+              id: Date.now() + Math.random(),
+              specialite: correspondant.specialite || 'Omnipratique'
+            };
+          });
+
+        // Ajouter les nouveaux correspondants à la liste existante
+        setCorrespondants(prev => [...prev, ...newCorrespondants]);
+        setTooltipMessage(`${newCorrespondants.length} correspondants importés avec succès`);
+        setShowTooltip(true);
+        setTimeout(() => setShowTooltip(false), 3000);
+      };
+      reader.readAsText(file);
+    }
   };
 
   return (
@@ -172,6 +220,22 @@ const Correspondants = () => {
           onChange={handleSearch}
           className="search-input"
         />
+        <div className="import-container">
+          <input
+            type="file"
+            id="csvImport"
+            accept=".csv"
+            onChange={handleImportCSV}
+            style={{ display: 'none' }}
+          />
+          <button 
+            onClick={() => document.getElementById('csvImport').click()}
+            className="import-btn"
+            title="Format attendu: nom,prenom,specialite,email,telephone,adresse"
+          >
+            <i className="fas fa-file-import"></i> Importer CSV
+          </button>
+        </div>
       </div>
       
       <div className="correspondants-form">
@@ -229,13 +293,17 @@ const Correspondants = () => {
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="specialite">Spécialité</label>
-              <input
-                type="text"
+              <select
                 id="specialite"
                 name="specialite"
                 value={newCorrespondant.specialite}
                 onChange={handleChange}
-              />
+                required
+              >
+                {specialites.map(specialite => (
+                  <option key={specialite} value={specialite}>{specialite}</option>
+                ))}
+              </select>
             </div>
           </div>
           
